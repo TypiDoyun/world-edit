@@ -1,0 +1,36 @@
+{
+	"format_version": 2,
+	"header": {
+		"name": "WorldEdit [Resource]",
+		"description": "This pack makes construction convenient!",
+		"uuid": "bac12017-4212-4bef-8032-bdbe5b673e48",
+		"version": [
+			1,
+			0,
+			0
+		],
+		"min_engine_version": [
+			1,
+			13,
+			0
+		]
+	},
+	"modules": [
+		{
+			"type": "resources",
+			"uuid": "be32407f-8ff5-4daf-bc27-68ae22af77ee",
+			"version": [
+				1,
+				0,
+				0
+			]
+		}
+	],
+	"metadata": {
+		"generated_with": {
+			"bridge": [
+				"1.8.4"
+			]
+		}
+	}
+}

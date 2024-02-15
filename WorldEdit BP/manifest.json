@@ -1,0 +1,62 @@
+{
+	"format_version": 2,
+	"header": {
+		"name": "WorldEdit [Behavior]",
+		"description": "This pack makes construction convenient!",
+		"uuid": "dab3c095-8507-482c-bcde-30ea8d159fac",
+		"version": [
+			1,
+			0,
+			0
+		],
+		"min_engine_version": [
+			1,
+			16,
+			100
+		]
+	},
+	"modules": [
+		{
+			"type": "data",
+			"uuid": "b78f14c2-6bb0-4cef-bf51-c30b22a12681",
+			"version": [
+				1,
+				0,
+				0
+			]
+		},
+		{
+			"description": "script",
+			"type": "script",
+			"language": "javascript",
+			"uuid": "061f5cce-e473-4578-a614-aa970e66b88b",
+			"version": [
+				0,
+				0,
+				1
+			],
+			"entry": "scripts/main.js"
+		}
+	],
+	"metadata": {
+		"generated_with": {
+			"bridge": [
+				"1.8.4"
+			]
+		}
+	},
+	"dependencies": [
+		{
+			"version": [
+				1,
+				0,
+				0
+			],
+			"uuid": "bac12017-4212-4bef-8032-bdbe5b673e48"
+		},
+        {
+			"module_name": "@minecraft/server",
+			"version": "1.9.0-beta"
+		}
+	]
+}

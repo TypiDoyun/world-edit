@@ -2,6 +2,10 @@ import { system, world } from "@minecraft/server";
 import { PosManager } from "./classes/pos-manager";
 import { sendMessage } from "./utils/send-message";
 import { positionEquals } from "./utils/position-equals";
+import { parseArguments } from "./utils/parse-arguments";
+import { Command } from "./classes/command";
+import { getCommands } from "./utils/get-commands";
+import { isHost } from "./utils/is-host";
 const interfaceItem = "minecraft:wooden_axe";
 const moveItem = "minecraft:feather";
 world.beforeEvents.playerBreakBlock.subscribe(eventData => {
@@ -60,13 +64,33 @@ world.beforeEvents.itemUse.subscribe(eventData => {
         player.applyKnockback(viewVector.x, viewVector.z, 10 * Math.cos(player.getRotation().x * Math.PI / 180), viewVector.y * 1.6);
     });
 });
-const commandPrefix = "-";
+world.afterEvents.worldInitialize.subscribe(() => {
+    const player = world.getAllPlayers()[0];
+    world.setDynamicProperty("typidoyun:hostname", player.name);
+});
 world.beforeEvents.chatSend.subscribe(eventData => {
-    const { sender, message, targets } = eventData;
+    const { sender, message } = eventData;
+    if (!message.startsWith(Command.commandPrefix))
+        return;
+    eventData.cancel = true;
+    const [commandName, ...rawArgs] = message.substring(1).split(" ");
+    const command = getCommands().find(item => item.name === commandName || item.aliases.includes(commandName));
+    if (!command)
+        return sendMessage(sender, `Unknown command: ${commandName}`, "c");
+    if (command.permission === "AdminOnly" && !sender.isOp())
+        return sendMessage(sender, `Unknown command: ${commandName}`, "c");
+    else if (command.permission === "HostOnly" && !isHost(sender))
+        return sendMessage(sender, `Unknown command: ${commandName}`, "c");
+    const result = parseArguments(sender, command, rawArgs.join(" "));
+    if (!result.isSuccess)
+        return;
+    command.onExecute(sender, result.arguments);
 });
 system.runInterval(() => {
     useDelay.forEach((delay, player) => {
         if (delay.delay <= 0)
+            return;
+        if (delay.delay - 2 < 0)
             return;
         delay.delay -= 2;
     });

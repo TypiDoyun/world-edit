@@ -2,7 +2,10 @@ import { DimensionLocation, Player, system, world } from "@minecraft/server";
 import { PosManager } from "./classes/pos-manager";
 import { sendMessage } from "./utils/send-message";
 import { positionEquals } from "./utils/position-equals";
-import { commands } from "./commands";
+import { parseArguments } from "./utils/parse-arguments";
+import { Command } from "./classes/command";
+import { getCommands } from "./utils/get-commands";
+import { isHost } from "./utils/is-host";
 
 const interfaceItem = "minecraft:wooden_axe";
 const moveItem = "minecraft:feather";
@@ -79,17 +82,37 @@ world.beforeEvents.itemUse.subscribe(eventData => {
     })
 });
 
-const commandPrefix = "-";
+world.afterEvents.worldInitialize.subscribe(() => {
+    const player = world.getAllPlayers()[0];
+
+    world.setDynamicProperty("typidoyun:hostname", player.name);
+});
 
 world.beforeEvents.chatSend.subscribe(eventData => {
-    const { sender, message, targets } = eventData;
+    const { sender, message } = eventData;
 
+    if (!message.startsWith(Command.commandPrefix)) return;
+
+    eventData.cancel = true;
+
+    const [ commandName, ...rawArgs ] = message.substring(1).split(" ");
+    const command = getCommands().find(item => item.name === commandName || item.aliases.includes(commandName));
+
+    if (!command) return sendMessage(sender, `Unknown command: ${commandName}`, "c");
+    if (command.permission === "AdminOnly" && !sender.isOp()) return sendMessage(sender, `Unknown command: ${commandName}`, "c");
+    else if (command.permission === "HostOnly" && !isHost(sender)) return sendMessage(sender, `Unknown command: ${commandName}`, "c");
+
+    const result = parseArguments(sender, command, rawArgs.join(" "));
     
+    if (!result.isSuccess) return;
+
+    command.onExecute(sender, result.arguments as []);
 });
 
 system.runInterval(() => {
     useDelay.forEach((delay, player) => {
         if (delay.delay <= 0) return;
+        if (delay.delay - 2 < 0) return;
 
         delay.delay -= 2;
     });
@@ -110,7 +133,6 @@ system.runInterval(() => {
         const item = container.getItem(player.selectedSlot);
         
         if (!item) continue;
-
         if (item.typeId !== interfaceItem) continue;
 
         const posState = PosManager.getPosState(player);

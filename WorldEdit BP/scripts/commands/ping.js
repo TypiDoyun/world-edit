@@ -4,12 +4,16 @@ const argumentTypes = ["String?"];
 export default new Command({
     name: "ping",
     description: "This command says to pong",
-    aliases: ["p"],
+    usage: "ping [message: string]",
+    aliases: [],
     permission: "None",
     argumentTypes,
     onExecute(player, args) {
         const [message] = args;
         sendMessage(player, `Pong!`);
+        if (!message)
+            return;
+        sendMessage(player, message);
     },
     onHelp(player) {
     }

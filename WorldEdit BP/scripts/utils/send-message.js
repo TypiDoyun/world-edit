@@ -1,3 +1,3 @@
-export const sendMessage = (player, message) => {
-    player.sendMessage(` §5> §f${message}`);
+export const sendMessage = (player, message, color = "5") => {
+    player.sendMessage(` §${color}> §f${message}`);
 };

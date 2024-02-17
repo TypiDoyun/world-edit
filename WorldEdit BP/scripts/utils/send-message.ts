@@ -1,5 +1,5 @@
 import { Player } from "@minecraft/server";
 
-export const sendMessage = (player: Player, message: string) => {
-    player.sendMessage(` §5> §f${message}`);
+export const sendMessage = (player: Player, message: string, color: string = "5") => {
+    player.sendMessage(` §${color}> §f${message}`);
 }

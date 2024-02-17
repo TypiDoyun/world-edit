@@ -1,12 +1,20 @@
-import { DimensionLocation, Player, Vector3, world } from "@minecraft/server";
+import { DimensionLocation, Player, system } from "@minecraft/server";
 import { canDisplay } from "../utils/can-display";
+import { sendMessage } from "../utils/send-message";
 
 type VisualizeType = "dot" | "line" | "surface";
+type History = {
+    startAt: DimensionLocation,
+    structureIds: string[]
+}
+
 
 export class PosState {
     private firstPos: DimensionLocation;
     private secondPos: DimensionLocation;
     private player: Player;
+    private histories: History[] = [ ];
+    private historyId = 0;
 
     constructor(player: Player) {
         const { dimension, location: { x, y, z } } = player;
@@ -48,6 +56,87 @@ export class PosState {
 
     public setSecondPos(location: DimensionLocation) {
         this.secondPos = location;
+    }
+
+    public save(callback: (result: boolean) => void) {
+        this.historyId++;
+
+        const history: History = {
+            startAt: this.getMinPos(),
+            structureIds: []
+        }
+
+        system.run(() => {
+            const result = this.iterate((posState, xIndex, _, zIndex) => {
+                const minPos = posState.getMinPos();
+                const maxPos = posState.getMaxPos();
+    
+                const structureId = `history-${this.historyId}-${xIndex}-${zIndex}`;
+    
+                history.structureIds.push(structureId);
+    
+                sendMessage(this.player, `${structureId} saved!`);
+                
+                this.player.runCommand(`say structure save "${structureId}" ${minPos.x} ${this.getMinPos().y} ${minPos.z} ${maxPos.x} ${this.getMaxPos().y} ${maxPos.z} false disk true`);
+                this.player.runCommand(`execute @s ~ ~ ~ structure save "${structureId}" ${minPos.x} ${this.getMinPos().y} ${minPos.z} ${maxPos.x} ${this.getMaxPos().y} ${maxPos.z} false disk true`);
+            }, [ 64, 384, 64 ]);
+    
+            if (result) {
+                if (this.histories.length >= 5) this.histories.shift();
+    
+                this.histories.push(history);
+            }
+        })
+
+    }
+
+    public loadLatestHistory() {
+        const latestHistory = this.histories.pop();
+
+        if (!latestHistory) return;
+
+        const { startAt, structureIds } = latestHistory;
+
+        system.run(() => {
+            for (const structureId of structureIds) {
+                const [ _, id, xIndex, zIndex ] = structureId.split("-");
+                
+                sendMessage(this.player, `${structureId} loaded!`);
+                
+                this.player.runCommand(`structure load "${structureId}" ${startAt.x + +xIndex * 64} ${startAt.y} ${startAt.z + +zIndex * 64} 0_degrees none false true`);
+                this.player.runCommand(`structure delete "${structureId}"`);
+            }
+        });
+    }
+
+    public iterate(callback: (posState: PosState, xIndex: number, yIndex: number, zIndex: number) => void, sizes: [ number, number, number ] = [ 31, 31, 31 ]): boolean {
+        if (!this.isValid) return false;
+
+        const minPos = this.getMinPos();
+        const maxPos = this.getMaxPos();
+        const dimension = this.firstPos.dimension;
+        const posState = new PosState(this.player);
+
+        let xIndex = -1;
+        let yIndex = -1;
+        let zIndex = -1;
+
+        for (let x = minPos.x; x <= maxPos.x; x += sizes[0]) {
+            xIndex++
+            for (let y = minPos.y; y <= maxPos.y; y += sizes[1]) {
+                yIndex++
+                for (let z = minPos.z; z <= maxPos.z; z += sizes[2]) {
+                    zIndex++;
+
+                    posState.setFirstPos({ dimension, x, y, z });
+                    posState.setSecondPos({ dimension, x: Math.min(maxPos.x, x + sizes[0] - 1), y: Math.min(maxPos.y, y + sizes[1] - 1), z: Math.min(maxPos.z, z + sizes[2] - 1) });
+                    
+                    callback(posState, xIndex, yIndex, zIndex);
+                }
+            }
+        }
+
+        return true;
     }
 
     public get isValid(): boolean {
